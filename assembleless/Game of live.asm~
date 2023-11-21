@@ -324,15 +324,17 @@ getNextRowInput:
 waitForConfirmation:
 	MOV	A, P0		;
 	ANL	A, #00000001b
-	jnz	waitForConfirmation	;Warte bis P0.0 gedrückt wurde
+	;jnz	waitForConfirmation	;Warte bis P0.0 gedrückt wurde
+	; Springt hoch, solange Accumulator A nicht null ist.
 waitForConfirmationButtonRelease:
 	MOV	A, P0		;
 	ANL	A, #00000001b
 	jz	waitForConfirmationButtonRelease	;Warte bis P0.0 "Losgelassen" wurde
-
+        ; Continues, wenn Accumulator A null ist -> Wert aus ANL (Bitwise AND) bleibt #00000001b
+        ; 
 	MOV	A, P1		;Zeile 0 in Akku
 	CPL	A
-	movx	@R0, A		;Speichern
+	movx	@R0, A		;Speichern in Register (!) ERROR on 8051
 
 	mov	P2, A		;LEDs an
 	mov	P2, #0		;LEDs aus

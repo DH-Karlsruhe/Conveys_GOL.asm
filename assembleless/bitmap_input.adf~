@@ -1,0 +1,10 @@
+# Assembler debug file for MCU 8051 IDE v1.4.9
+# Used assembler: MCU 8051 IDE
+# Date: 11/21/2023
+9E80A30FF0545738BDEB35C6CB8A121A "bitmap_input.asm" 
+0 4 0 127 0
+0 5 2 126 127
+0 6 4 2 0 7
+0 11 7 239
+0 12 8 36 32
+0 13 10 255

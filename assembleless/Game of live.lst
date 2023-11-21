@@ -102,12 +102,12 @@ Game of live                                                                    
                        100
                        101     checkcolumn:                    ;Iteriert durch alle Spalten
 009F 7F00              102             MOV     R7, #0          ;Zurücksetzen von R7 (Speichert die anzahl an Nachbarn einer Zelle zw
-00A1 9001A4            103             mov     DPTR, #table2   ;Laden der Masken für die Nachbar-Checks
+00A1 9001A2            103             mov     DPTR, #table2   ;Laden der Masken für die Nachbar-Checks
 00A4 11E3              104             ACALL   checkTop        ;Überprüfen wie viele Nachbarn in der Zeile oberhalb der Zelle sind
 00A6 11EE              105             ACALL   checkMid        ;Überprüfen wie viele Nachbarn in der Zeile der Zelle sind
 00A8 11F3              106             ACALL   checkBottom     ;Überprüfen wie viele Nachbarn in der Zeile unterhalb der Zelle sind
                        107
-00AA 90019C            108             mov     DPTR, #table    ;Setze DataPointer auf masken tabelle für das hinzufügen der neuen Ze
+00AA 90019A            108             mov     DPTR, #table    ;Setze DataPointer auf masken tabelle für das hinzufügen der neuen Ze
 00AD EB                109             mov     A, R3           ;Lade die aktuelle Spaltennummer
 00AE 93                110             movC    A, @A+DPTR      ;Hole Maske dass nur die Spalte gesetzt wird (z.B. Maske Spalte 0: #1
 00AF FE                111             mov     R6, A           ;               ;Zwischenspeichern des Maske in R6
@@ -326,37 +326,39 @@ Game of live                                                                    
                        324     waitForConfirmation:
 017D E580              325             MOV     A, P0           ;
 017F 5401              326             ANL     A, #00000001b
-0181 70FA              327             jnz     waitForConfirmation     ;Warte bis P0.0 gedrückt wurde
-                       328     waitForConfirmationButtonRelease:
-0183 E580              329             MOV     A, P0           ;
-0185 5401              330             ANL     A, #00000001b
-0187 60FA              331             jz      waitForConfirmationButtonRelease        ;Warte bis P0.0 "Losgelassen" wurde
-                       332
-0189 E590              333             MOV     A, P1           ;Zeile 0 in Akku
-018B F4                334             CPL     A
-018C F2                335             movx    @R0, A          ;Speichern
-                       336
-018D F5A0              337             mov     P2, A           ;LEDs an
-018F 75A000            338             mov     P2, #0          ;LEDs aus
-                       339
-0192 E5B0              340             mov     a, P3           ;Zeilenmaske laden
-0194 23                341             RL      A               ;Maske für die nächste Zeile erstellen
-0195 F5B0              342             mov     p3, a           ;Maske an p3 ausgeben
-0197 08                343             inc     R0              ;Zeilenzähler erhöhen
-                       344
-0198 B808E2            345             cjne    R0, #8, getNextRowInput ;Wenn alle acht zeilen gezeichnet sind wird weiter gemacht
+                       327             ;jnz    waitForConfirmation     ;Warte bis P0.0 gedrückt wurde
+                       328             ; Springt hoch, solange Accumulator A nicht null ist.
+                       329     waitForConfirmationButtonRelease:
+0181 E580              330             MOV     A, P0           ;
+0183 5401              331             ANL     A, #00000001b
+0185 60FA              332             jz      waitForConfirmationButtonRelease        ;Warte bis P0.0 "Losgelassen" wurde
+                       333             ; Continues, wenn Accumulator A null ist -> Wert aus ANL (Bitwise AND) bleibt #00000001b
+                       334             ;
+0187 E590              335             MOV     A, P1           ;Zeile 0 in Akku
+0189 F4                336             CPL     A
+018A F2                337             movx    @R0, A          ;Speichern in Register (!) ERROR on 8051
+                       338
+018B F5A0              339             mov     P2, A           ;LEDs an
+018D 75A000            340             mov     P2, #0          ;LEDs aus
+                       341
+0190 E5B0              342             mov     a, P3           ;Zeilenmaske laden
+0192 23                343             RL      A               ;Maske für die nächste Zeile erstellen
+0193 F5B0              344             mov     p3, a           ;Maske an p3 ausgeben
+0195 08                345             inc     R0              ;Zeilenzähler erhöhen
                        346
-019B 22                347             ret
+0196 B808E4            347             cjne    R0, #8, getNextRowInput ;Wenn alle acht zeilen gezeichnet sind wird weiter gemacht
                        348
-                       349     ; -----------------
-                       350     ; Masken
-                       351     ;------------------
-019C 8040201008        352     table:  db      10000000b, 01000000b, 00100000b, 00010000b, 00001000b, 00000100b, 00000010b, 00000001
+0199 22                349             ret
+                       350
+                       351     ; -----------------
+                       352     ; Masken
+                       353     ;------------------
+019A 8040201008        354     table:  db      10000000b, 01000000b, 00100000b, 00010000b, 00001000b, 00000100b, 00000010b, 00000001
      040201
-01A4 0180402010        353     table2: db      00000001b, 10000000b, 01000000b, 00100000b, 00010000b, 00001000b, 00000100b, 00000010
+01A2 0180402010        355     table2: db      00000001b, 10000000b, 01000000b, 00100000b, 00010000b, 00001000b, 00000100b, 00000010
      0804020180
-                       354
-                       355             end
+                       356
+                       357             end
 ASSEMBLY COMPLETE, NO ERRORS FOUND, 1 WARNING
 
 
@@ -547,8 +549,8 @@ T0 . . . . . . . . . . . . . . . . .  B  ADDR  00B4H  NOT USED
 T1 . . . . . . . . . . . . . . . . .  B  ADDR  00B5H  NOT USED
 T2CON. . . . . . . . . . . . . . . .  D  ADDR  00C8H  NOT USED
 T2MOD. . . . . . . . . . . . . . . .  D  ADDR  00C9H  NOT USED
-TABLE. . . . . . . . . . . . . . . .  C  ADDR  019CH
-TABLE2 . . . . . . . . . . . . . . .  C  ADDR  01A4H
+TABLE. . . . . . . . . . . . . . . .  C  ADDR  019AH
+TABLE2 . . . . . . . . . . . . . . .  C  ADDR  01A2H
 TB8. . . . . . . . . . . . . . . . .  B  ADDR  009BH  NOT USED
 TCLK . . . . . . . . . . . . . . . .  B  ADDR  00CCH  NOT USED
 TCON . . . . . . . . . . . . . . . .  D  ADDR  0088H  NOT USED
@@ -571,8 +573,8 @@ TR0. . . . . . . . . . . . . . . . .  B  ADDR  008CH
 TR1. . . . . . . . . . . . . . . . .  B  ADDR  008EH
 TR2. . . . . . . . . . . . . . . . .  B  ADDR  00CAH  NOT USED
 TXD. . . . . . . . . . . . . . . . .  B  ADDR  00B1H  NOT USED
-WAITFORCONFIRMATION. . . . . . . . .  C  ADDR  017DH
-WAITFORCONFIRMATIONBUTTONRELEASE . .  C  ADDR  0183H
+WAITFORCONFIRMATION. . . . . . . . .  C  ADDR  017DH  NOT USED
+WAITFORCONFIRMATIONBUTTONRELEASE . .  C  ADDR  0181H
 WDTCON . . . . . . . . . . . . . . .  D  ADDR  00A7H  NOT USED
 WDTPRG . . . . . . . . . . . . . . .  D  ADDR  00A7H  NOT USED
 WDTRST . . . . . . . . . . . . . . .  D  ADDR  00A6H  NOT USED
