@@ -224,7 +224,7 @@
 ]>
 <tk_mcuide_project version="" date="11/21/2023" creator_ver="1.4.9">
 	<general>
-		<authors><![CDATA[dhbw-karlsruhe
+		<authors><![CDATA[feblank
 ]]></authors>
 		<copyright><![CDATA[]]></copyright>
 		<license><![CDATA[]]></license>
@@ -270,36 +270,6 @@
 		pwin_sash="0"
 		selected_view="0"
 		pwin_orient="horizontal">
-
-		<file name="Conveys_GOL.asm" active="no" o_bookmark="0" p_bookmark="0" file_index="0" read_only="0" highlight="0">
-			<actual_line value="1"/>
-			<md5_hash value=""/>
-			<path><![CDATA[]]></path>
-			<bookmarks>
-				0
-			</bookmarks>
-			<breakpoints>
-				0
-			</breakpoints>
-			<eol value="lf"/>
-			<encoding value="utf-8"/>
-			<notes><![CDATA[]]></notes>
-		</file>
-
-		<file name="BitmapInput.asm" active="yes" o_bookmark="0" p_bookmark="0" file_index="0" read_only="0" highlight="0">
-			<actual_line value="99"/>
-			<md5_hash value="7C627B0B44905FB099D34B961063BAB0"/>
-			<path><![CDATA[]]></path>
-			<bookmarks>
-				0
-			</bookmarks>
-			<breakpoints>
-				0
-			</breakpoints>
-			<eol value="lf"/>
-			<encoding value="utf-8"/>
-			<notes><![CDATA[]]></notes>
-		</file>
 
 	</files>
 </tk_mcuide_project>

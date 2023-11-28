@@ -27,3 +27,5 @@ goto 2
 ## Cheat-Sheet
 
 https://www.win.tue.nl/~aeb/comp/8051/set8051.html#51pop
+mit Beispielen..  
+https://www.engineersgarage.com/8051-instruction-set/
