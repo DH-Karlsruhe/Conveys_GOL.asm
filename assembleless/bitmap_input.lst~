@@ -1,27 +1,112 @@
 bitmap_input                                                                                                            PAGE 1
-                         1
-                         2     init:
-                         3             ;MOV A,  #00000001b   ; Temporärer Speicher für Mapping
-                         4             MOV R7, #00h         ; Reset auf erste Position in Eingabe-Bitmap
-                         5             MOV R6, #7Fh         ; Reset auf erste Position in Programm-Map
-                         6             jmp stepRow
-                         7
-                         8
-                         9     stepRow:
-                        10             ; TODO: JMP out if out of bounds.
-                        11             MOV R6, R7        ;
-****ERROR:Invalidsetofoperands:movR6,R7
-                        12             MOV A, R7         ; Get current Row-Pointer into Acc.
-                        13             ADD A, #20h       ; Step to next Row (TODO: Validation?!)
-                        14             MOV R7, A         ; Copy new Row Value into Row-Pointer.
-                        15
+                         1     ; Doku mit Beispielen:  https://www.engineersgarage.com/8051-instruction-set/
+                         2     ; MOV (into) ## (from) ##
+                         3
+                         4     ; # Value Comparison on MCU-8051
+                         5     ;CJNE  R0,#00H,NOTEQUAL
+                         6     ;; equal code goes here, then branch out
+                         7     ;NOTEQUAL:
+                         8     ;JC GREATER
+                         9     ;; less than code goes here, then branch out
+                        10     ;GREATER:
+                        11     ;; greater code goes here
+                        12
+                        13
+                        14     init:
+                        15             MOV     A, #00000000b   ; nur Acc kann zum arithmetieren verwendet werden! (ADD B, #20h  ; fu
+                        16             MOV     R0, #00h        ; Reset auf erste Position in Eingabe-Bitmap
+                        17             ;
+                        18             MOV     R1, #7Fh        ; Reset auf erste Position in Programm-Map
+                        19             MOV     R5, #0Fh        ; #0Fh = Active on lower half
+                        20                                     ; | #F0h = Active on upper half
+                        21             MOV     R6, #00h        ; Column-Count-Speicher für Mapping
+                        22             MOV     R7, #00h        ; Row-Count-Speicher für Mapping
+                        23             ; R6 Step: 07h,27h,47h,67h, (upper-half) 0F,2F,4F,6F
+                        24             ; 1.Option: Heraubstufende less-tham 07h<27h<47h => sieht nicht gut aus.
+                        25             ; 2.Option: Arithmetisch mittels Incr. Col-Counter,
+                        26             ;           der bei ersten vier Reihen bei 07h abgefangen
+                        27             ;           und in nächster Reihe auf 00h zurückgesetzt wird.
+                        28             ;           Bei den nächsten vier Reihen ändert sich der Zählbereich
+                        29             ;           des Spaltenzählers auf den Intervall: [08h,0Fh]
+                        30             ;
+                        31             ;           Zeiger-Wert wird durch Addition des Reihenwerts mit Spaltenwerts ermittelt.
+                        32             MOV     R7, #00h        ; Reset des Row-Counters
+                        33             JMP     checkMapBounds
+                        34
+                        35     checkMapBounds:
+                        36             CJNE    R1, #40h, stepMap
+                        37             ;  => Beende Initialisierung, wenn 0x40 in Programm-Map erreicht.
+                        38             JMP     isDone
+                        39
+                        40     stepMap:
+                        41             MOV     B, @R0          ; Get Bit-Value of Input-Field
+                        42             JB      @R0, setTargetBit       ; Jump to set target bit if Input-Bit is set.
+****ERROR:Invalidsetofoperands:jb@R0,setTargetBit
+                        43             JMP     nextInputVal
+                        44             DEC     R1              ; Programm-Pointer muss nur dekrementiert werden.
+                        45             JMP     checkMapBounds  ; LOOP
+                        46
+                        47     nextInputVal:
+                        48             ; R0 is input Ptr-Store
+                        49             ; Before returning: Check if Accumulater is in bounds!
+                        50             ; R5 is the upper(F0)/lower(0F) switch
+                        51             CJNE    R5, #0Fh, nextUpperInputVal  ; means the opposite due to CJNE negation!
+****ERROR:Symbolnotdefined:f0h
+                        52             CJNE    R5, #F0h, nextLowerInputVal
+                        53             ; differenciate upper and lower half of bit-map..
+                        54             JMP     nextInputRow
+                        55             ; Column-Counter: [0,7]
+                        56             RET
+                        57
+                        58     nextLowerInputVal:
+                        59             CJNE    R6, #07h, nextInputCol    ; Also Resets Column counter!
+                        60             ; You are on last column of row here..
+                        61             ; [0,*7*]
+                        62             ; Are we still in lower half? => R7 == #67h => last field of lower half.
+                        63             ;         => if last field, switch R5 to upper-half(#F0h)
+                        64             ; TODO
+                        65
+                        66     nextUpperInputVal:
+                        67             CJNE    R6, #0Fh, nextInputCol
+                        68             ; You are on last column of row here..
+                        69             ; [8,*F*]
+                        70             ; TODO
+                        71
+                        72     nextInputCol:
+                        73             ; You are on [0,n-1] col.
+                        74             ;JC GREATER ; SHOULD NOT Happen as long as we use INC on a per loop basis!
+                        75             MOV    A, R7   ; Move row count in Acc
+                        76             ADD    A, R6   ; Add Col count
+                        77             MOV    R0, A   ; Move new Pointer into input Pointer.
+                        78
+                        79     nextInputRow:
+                        80             ; Row Incrementation is equal for upper/lower half.
+                        81             MOV     A, R0
+                        82             ADD     A, #20h         ; Add 2 to upper nibble => Next input row.
+                        83             MOV     R0, A           ; Put back into Input-Pointer.
+                        84             INC     R7              ; Increment Row-Counter
+                        85             RET
+                        86
+                        87     setTargetBit:
+                        88             MOV     @R1, #01h       ; Actually set Bit in target map.
+                        89             RET
+                        90
+                        91     isDone: ; ..CLEANUP..
+                        92             CLR     A
+                        93             CLR     B
+****ERROR:Invalidsetofoperands:clrB
+                        94             MOV     R0, #00h
+                        95             MOV     R1, #00h
+                        96             MOV     R7, #00h
 ****WARNING:Missing`END'directive
-ASSEMBLY COMPLETE, NO ERRORS FOUND, 2 WARNINGS
+ASSEMBLY COMPLETE, NO ERRORS FOUND, 4 WARNINGS
 
 
 ERROR SUMMARY:
-Line 11, ERROR:Invalidsetofoperands:movR6,R7
-Line 16, WARNING:Missing`END'directive
+Line 42, ERROR:Invalidsetofoperands:jb@R0,setTargetBit
+Line 52, ERROR:Symbolnotdefined:f0h
+Line 95, ERROR:Invalidsetofoperands:clrB
+Line 99, WARNING:Missing`END'directive
 
 SYMBOL TABLE:
 ??MCU_8051_IDE . . . . . . . . . . .  N  NUMB  8051H  NOT USED
@@ -36,7 +121,7 @@ ADDH . . . . . . . . . . . . . . . .  D  ADDR  00F5H  NOT USED
 ADDL . . . . . . . . . . . . . . . .  D  ADDR  00F4H  NOT USED
 AUXR . . . . . . . . . . . . . . . .  D  ADDR  008EH  NOT USED
 AUXR1. . . . . . . . . . . . . . . .  D  ADDR  00A2H  NOT USED
-B. . . . . . . . . . . . . . . . . .  D  ADDR  00F0H  NOT USED
+B. . . . . . . . . . . . . . . . . .  D  ADDR  00F0H
 BDRCON . . . . . . . . . . . . . . .  D  ADDR  009BH  NOT USED
 BDRCON_1 . . . . . . . . . . . . . .  D  ADDR  009CH  NOT USED
 BRL. . . . . . . . . . . . . . . . .  D  ADDR  009AH  NOT USED
@@ -66,6 +151,7 @@ CCF4 . . . . . . . . . . . . . . . .  B  ADDR  00DCH  NOT USED
 CCON . . . . . . . . . . . . . . . .  D  ADDR  00D8H  NOT USED
 CFINT. . . . . . . . . . . . . . . .  C  ADDR  0033H  NOT USED
 CH . . . . . . . . . . . . . . . . .  D  ADDR  00F9H  NOT USED
+CHECKMAPBOUNDS . . . . . . . . . . .  C  ADDR  0011H
 CKCON. . . . . . . . . . . . . . . .  D  ADDR  008FH  NOT USED
 CKCON0 . . . . . . . . . . . . . . .  D  ADDR  008FH  NOT USED
 CKRL . . . . . . . . . . . . . . . .  D  ADDR  0097H  NOT USED
@@ -110,11 +196,17 @@ IPH0 . . . . . . . . . . . . . . . .  D  ADDR  00B7H  NOT USED
 IPH1 . . . . . . . . . . . . . . . .  D  ADDR  00B3H  NOT USED
 IPL0 . . . . . . . . . . . . . . . .  D  ADDR  00B8H  NOT USED
 IPL1 . . . . . . . . . . . . . . . .  D  ADDR  00B2H  NOT USED
+ISDONE . . . . . . . . . . . . . . .  C  ADDR  003BH
 IT0. . . . . . . . . . . . . . . . .  B  ADDR  0088H  NOT USED
 IT1. . . . . . . . . . . . . . . . .  B  ADDR  008AH  NOT USED
 KBE. . . . . . . . . . . . . . . . .  D  ADDR  009DH  NOT USED
 KBF. . . . . . . . . . . . . . . . .  D  ADDR  009EH  NOT USED
 KBLS . . . . . . . . . . . . . . . .  D  ADDR  009CH  NOT USED
+NEXTINPUTCOL . . . . . . . . . . . .  C  ADDR  002FH
+NEXTINPUTROW . . . . . . . . . . . .  C  ADDR  0032H
+NEXTINPUTVAL . . . . . . . . . . . .  C  ADDR  001FH
+NEXTLOWERINPUTVAL. . . . . . . . . .  C  ADDR  0029H
+NEXTUPPERINPUTVAL. . . . . . . . . .  C  ADDR  002CH
 OSCCON . . . . . . . . . . . . . . .  D  ADDR  0086H  NOT USED
 OV . . . . . . . . . . . . . . . . .  B  ADDR  00D2H  NOT USED
 P. . . . . . . . . . . . . . . . . .  B  ADDR  00D0H  NOT USED
@@ -165,6 +257,7 @@ SADEN_0. . . . . . . . . . . . . . .  D  ADDR  00B9H  NOT USED
 SADEN_1. . . . . . . . . . . . . . .  D  ADDR  00BAH  NOT USED
 SBUF . . . . . . . . . . . . . . . .  D  ADDR  0099H  NOT USED
 SCON . . . . . . . . . . . . . . . .  D  ADDR  0098H  NOT USED
+SETTARGETBIT . . . . . . . . . . . .  C  ADDR  0038H  NOT USED
 SINT . . . . . . . . . . . . . . . .  C  ADDR  0023H  NOT USED
 SM0. . . . . . . . . . . . . . . . .  B  ADDR  009FH  NOT USED
 SM1. . . . . . . . . . . . . . . . .  B  ADDR  009EH  NOT USED
@@ -176,7 +269,7 @@ SPDAT. . . . . . . . . . . . . . . .  D  ADDR  00C5H  NOT USED
 SPDR . . . . . . . . . . . . . . . .  D  ADDR  0086H  NOT USED
 SPSR . . . . . . . . . . . . . . . .  D  ADDR  00AAH  NOT USED
 SPSTA. . . . . . . . . . . . . . . .  D  ADDR  00C4H  NOT USED
-STEPROW. . . . . . . . . . . . . . .  C  ADDR  0007H
+STEPMAP. . . . . . . . . . . . . . .  C  ADDR  0017H
 T0 . . . . . . . . . . . . . . . . .  B  ADDR  00B4H  NOT USED
 T1 . . . . . . . . . . . . . . . . .  B  ADDR  00B5H  NOT USED
 T2CON. . . . . . . . . . . . . . . .  D  ADDR  00C8H  NOT USED
