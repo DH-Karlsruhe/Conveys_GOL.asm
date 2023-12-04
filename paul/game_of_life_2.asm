@@ -1,3 +1,57 @@
+; setting initial state of field
+; ----------------------------
+mov 0x52, #01h
+mov 0x53, #01h
+mov 0x54, #01h
+mov 0x4B, #01h
+mov 0x5B, #01h
+; ----------------------------
+
+; [START: next gen calc]------------------------------------------------------------------------------------------------------------------------
+start_next_gen_calc:
+mov R0, #40h				; start address of cells
+
+loop_next_gen_calc:
+
+; check if address is in first line
+cjne R0, #48h, first_line_not_equal
+jmp not_first_line
+first_line_not_equal:
+jc first_line
+jmp not_first_line
+
+first_line:
+
+not_first_line:
+
+; check if address is in last line
+cjne R0, #77h, last_line_not_equal
+jmp not_last_line
+last_line_not_equal:
+jc not_last_line
+jmp last_line
+
+last_line:
+
+not_last_line:
+
+; check if address is in first column
+MOV A, R0
+ANL A, #07h				; check if the lowest 3 bits are set
+cjne A, #0h, not_first_column
+; first_column
+not_first_column:
+cjne A, #07h, not_first_or_last_column
+; last_column
+not_first_or_last_column:
+; TODO
+
+inc R0					; loop step
+cjne R0, #080h, loop_next_gen_calc	; loop
+; [END: next gen calc  ]------------------------------------------------------------------------------------------------------------------------
+
+; [START: display logic]------------------------------------------------------------------------------------------------------------------------
+start_display:
 mov R0, #040h		; start address of cells
 
 mov R1, #01h		; column index
@@ -6,24 +60,17 @@ mov R2, #01h		; row index
 ; reset led matrix
 mov p0, #0h
 mov p1, #0h
-; ----------------------------
-mov 0x49, #01h
-mov 0x4A, #01h
-mov 0x4B, #01h
-; ----------------------------
 
 loop:
-
-mov A, @R0
-ANL A, #01h
-cjne A, #01h, after_write
-
+mov A, @R0			; load cell at R0 into A
+ANL A, #01h			; and A with 01h
+cjne A, #01h, after_write	; if A is not equal to 01h, jump to after_write
 jmp write_to_led_panel
-after_write:
 
-mov A, R0
-ANL A, #07h		; check if the lowest bits are all set
-cjne A, #07h, loop_step	; if they are, goto loop_step
+after_write:
+mov A, R0			; load current address (in R0) into A
+ANL A, #07h			; check if the lowest bits are all set
+cjne A, #07h, loop_step		; if they are, goto loop_step
 
 ; shift the ROW pointer one to the left
 mov A, R2
@@ -31,14 +78,17 @@ rl A
 mov R2, A
 
 loop_step:
-inc R0			; increase address pointer
+inc R0				; increase address pointer
 
 ; shift the COL pointer on to the left
 mov A, R1
 rl A
 mov R1, A
 
-cjne R0, #080h, loop	; loop
+cjne R0, #080h, loop		; loop
+
+jmp start_display
+; [END: display logic  ]------------------------------------------------------------------------------------------------------------------------
 
 write_to_led_panel:
 mov p1, R1
