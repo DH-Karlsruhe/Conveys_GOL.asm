@@ -19,7 +19,7 @@
 
 
 init:
-	;CALL	loadGliderPreset
+	CALL	loadGliderPreset
 	MOV	A, #00000000b	; nur Acc kann zum arithmetieren verwendet werden! (ADD B, #20h  ; funkt nich.)
 	MOV	R0, #20h	; Reset to first Byte-Position of Input-Bitmap
 	;
@@ -173,4 +173,4 @@ loadGliderPreset:
 
 ; HAS TO BE @END!
 
-FIN: 
+FIN:

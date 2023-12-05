@@ -1,0 +1,503 @@
+Conveys_GOL                                                                                                             PAGE 1
+                         1
+                         2     ;
+                 =1      3     INCLUDE  BitmapInput.asm
+                 =1      4     ; Doku mit Beispielen:  https://www.engineersgarage.com/8051-instruction-set/
+                 =1      5     ; MOV (into) ## (from) ##
+                 =1      6
+                 =1      7     ; # Value Comparison on MCU-8051
+                 =1      8     ;CJNE  R0,#00H,NOTEQUAL
+                 =1      9     ;; equal code goes here, then branch out
+                 =1     10     ;NOTEQUAL:
+                 =1     11     ;JC LESS_THAN
+                 =1     12     ;; greater than code goes here, then branch out
+                 =1     13     ;LESS_THAN:
+                 =1     14     ;; less than code goes here
+                 =1     15     ;
+                 =1     16     ; RR A  ; Rotiert um ein Bit nach Rechts,
+                 =1     17             ; sodass diese rechts (LSB) in das Carry-Bit fallen
+                 =1     18             ; und beim nächsten Mal rotieren wieder ans linke (MSB) Bit geschrieben werden.
+                 =1     19     ;
+                 =1     20     ;  <symbol> SET <register> funktioniert nicht mit CJNE!
+                 =1     21     ;
+                 =1     22
+                 =1     23
+                 =1     24     init:
+0000 12009F      =1     25             CALL    loadGliderPreset
+0003 7400        =1     26             MOV     A, #00000000b   ; nur Acc kann zum arithmetieren verwendet werden! (ADD B, #20h  ; fu
+0005 7820        =1     27             MOV     R0, #20h        ; Reset to first Byte-Position of Input-Bitmap
+                 =1     28             ;
+0007 797F        =1     29             MOV     R1, #7Fh        ; Reset auf erste Position in Programm-Map
+                 =1     30             ; --
+0009 7D0F        =1     31             MOV     R5, #0Fh        ; #0Fh = Active on lower half | #F0h = Active on upper half
+000B 7E00        =1     32             MOV     R6, #00h        ; Column-Count-Speicher für Mapping [0,7]
+000D 7F00        =1     33             MOV     R7, #00h        ; Row-Count-Speicher für Mapping
+000F C2D0        =1     34             CLR     P               ; Clear Parity-Bit
+                 =1     35             ; R6 Step: 07h,27h,47h,67h, (upper-half) 0F,2F,4F,6F
+                 =1     36             ; 1.Option: Heraubstufende less-tham 07h<27h<47h => sieht nicht gut aus.
+                 =1     37             ; 2.Option: Arithmetisch mittels Incr. Col-Counter,
+                 =1     38             ;           der bei ersten vier Reihen bei 07h abgefangen
+                 =1     39             ;           und in nächster Reihe auf 00h zurückgesetzt wird.
+                 =1     40             ;           Bei den nächsten vier Reihen ändert sich der Zählbereich
+                 =1     41             ;           des Spaltenzählers auf den Intervall: [08h,0Fh]
+                 =1     42             ;            => Zeiger-Wert wird durch Addition des Reihenwerts mit Spaltenwerts ermittelt.
+                 =1     43             ; 3.Option: Da es nicht möglich ist Bit-Zeiger zu arithmetieren
+                 =1     44             ;           und nur statisch auf die Indizes zugegriffen werden kann,
+                 =1     45             ;           wird zeilenweise (byte-weise) eingelesen
+                 =1     46             ;           und jedes Bit per Index überprüft, was im 1-Fall zu einem Setzen in der Programm-
+0011 7F00        =1     47             MOV     R7, #00h        ; Reset des Row-Counters
+                 =1     48             ;CALL    resetProgrammMap
+0013 020016      =1     49             JMP     checkMapBounds
+                 =1     50
+                 =1     51     checkMapBounds:
+0016 B93F03      =1     52             CJNE    R1, #3Fh, checkLessThanBounds
+                 =1     53             ;  => Beende Initialisierung, wenn 0x3F (Folge-Stelle der letzten Zelle) in Programm-Map-Poin
+0019 02005B      =1     54             JMP     isDone
+                 =1     55
+                 =1     56     checkLessThanBounds:
+001C 403D        =1     57             JC      isDone          ; less than boundary - which is possible in some cases.
+001E 020021      =1     58             JMP     stepRow
+                 =1     59
+                 =1     60     stepRow:
+0021 E6          =1     61             MOV     A, @R0          ; Get Row-Byte-Value of Input-Row
+0022 020025      =1     62             JMP     stepCol
+                 =1     63
+                 =1     64     stepCol:
+                 =1     65             ; Check if Boundary is reached
+0025 BE0807      =1     66             CJNE    R6, #08h, evalCell
+                 =1     67             ; Boundary reached..
+0028 7E00        =1     68             MOV     R6, #00h        ; Reset Col-Counter
+002A 12003B      =1     69             CALL    nextInputRow
+002D 80E7        =1     70             JMP     checkMapBounds  ; LOOP-Row
+                 =1     71
+                 =1     72     evalCell:
+002F 20E018      =1     73             JB      A.0, setTargetBit       ; Jump to set target bit if Input-Bit is set.
+0032 120037      =1     74             CALL    nextMapStep
+0035 80EE        =1     75             JMP     stepCol
+                 =1     76
+                 =1     77     nextMapStep:                    ; only call with CALL!
+0037 19          =1     78             DEC     R1              ; Programm-Pointer-- ()only has to be decremented)
+0038 0E          =1     79             INC     R6              ; Col-Counter++
+0039 03          =1     80             RR      A               ; rotate >> bit in scope of A.0
+003A 22          =1     81             RET
+                 =1     82
+                 =1     83     nextInputRow:                   ; only call with CALL!
+                 =1     84             ; Row Incrementation is equal for upper/lower half.
+003B BF0306      =1     85             CJNE    R7, #03, stepInputRow
+003E 7821        =1     86             MOV     R0, #21h        ; Switch to new Memory-Location for upper half
+0040 7E00        =1     87             MOV     R6, #00h        ; Reset Col-Counter
+0042 0F          =1     88             INC     R7              ; Row-Counter (although its trivial at this point)
+0043 22          =1     89             RET
+                 =1     90
+                 =1     91     stepInputRow:
+0044 E8          =1     92             MOV     A, R0
+0045 2404        =1     93             ADD     A, #04h         ; Add 4 to upper nibble => Next LOWER-HALF input row.
+0047 F8          =1     94             MOV     R0, A           ; Put back into **Input-Pointer**.
+0048 0F          =1     95             INC     R7              ; Increment Row-Counter (to switch to upper half if = 4)
+0049 22          =1     96             RET
+                 =1     97
+                 =1     98     setTargetBit:
+004A 7701        =1     99             MOV     @R1, #01h       ; Actually set Bit in target map.
+004C 1137        =1    100             CALL    nextMapStep
+004E 80D5        =1    101             JMP     stepCol
+                 =1    102
+                 =1    103     resetProgrammMap:
+0050 B93F03      =1    104             CJNE    R1, #3Fh, resetProgrammMapStep
+0053 7F00        =1    105             MOV     R7, #00h
+0055 22          =1    106             RET
+                 =1    107
+                 =1    108     resetProgrammMapStep:
+0056 19          =1    109             DEC     R1
+0057 7700        =1    110             MOV     @R1, #00h       ; Reset Cell
+0059 80F5        =1    111             JMP     resetProgrammMap
+                 =1    112
+                 =1    113     ; STUPID: Due 8-Bit relative addressable BUG,
+                 =1    114     ;         this label "isDone" cannot be at the bottom,
+                 =1    115     ;         because its called too far ahed?!?!
+                 =1    116     isDone:                         ; ..CLEANUP..
+005B E4          =1    117             CLR     A
+005C 75F000      =1    118             MOV     B, #00h
+005F 7800        =1    119             MOV     R0, #00h
+0061 7900        =1    120             MOV     R1, #00h
+0063 7F00        =1    121             MOV     R7, #00h
+0065 0200B0      =1    122             JMP     FIN
+                 =1    123             ; FIN. => Play..
+                 =1    124
+                 =1    125     ;;;;;;;;;;;;;;
+                 =1    126     ; OPTIONALS
+                 =1    127     loadPreset:
+                 =1    128             ; bottom up with R0 => R7
+0068 E8          =1    129             MOV     A, R0
+0069 89F0        =1    130             MOV     B, R1
+006B 7820        =1    131             MOV     R0, #20h        ; lowest line.
+006D 7924        =1    132             MOV     R1, #24h        ; 2. line (bottom up)
+006F F6          =1    133             MOV     @R0, A
+0070 A7F0        =1    134             MOV     @R1, B
+0072 EA          =1    135             MOV     A, R2
+0073 8BF0        =1    136             MOV     B, R3
+0075 7828        =1    137             MOV     R0, #28h        ; 3. line
+0077 792C        =1    138             MOV     R1, #2Ch        ; 4. line
+0079 F6          =1    139             MOV     @R0, A
+007A A7F0        =1    140             MOV     @R1, B
+007C EC          =1    141             MOV     A, R4
+007D 8DF0        =1    142             MOV     B, R5
+007F 7821        =1    143             MOV     R0, #21h        ; 5. line
+0081 7925        =1    144             MOV     R1, #25h        ; 6. line
+0083 F6          =1    145             MOV     @R0, A
+0084 A7F0        =1    146             MOV     @R1, B
+0086 EE          =1    147             MOV     A, R6
+0087 8FF0        =1    148             MOV     B, R7
+0089 7829        =1    149             MOV     R0, #29h        ; 5. line
+008B 792D        =1    150             MOV     R1, #2Dh        ; 6. line
+008D F6          =1    151             MOV     @R0, A
+008E A7F0        =1    152             MOV     @R1, B
+                 =1    153             ; Clear All registers
+0090 7F00        =1    154             MOV     R7, #00000000b
+0092 7E00        =1    155             MOV     R6, #00000000b
+0094 7D00        =1    156             MOV     R5, #00000000b
+0096 7C00        =1    157             MOV     R4, #00000000b
+0098 7A00        =1    158             MOV     R2, #00000000b
+009A 7900        =1    159             MOV     R1, #00000000b
+009C 7800        =1    160             MOV     R0, #00000000b
+009E 22          =1    161             RET
+                 =1    162
+                 =1    163     ; PRESETS
+                 =1    164     loadGliderPreset:
+009F 7F40        =1    165             MOV     R7, #01000000b
+00A1 7E20        =1    166             MOV     R6, #00100000b
+00A3 7DE0        =1    167             MOV     R5, #11100000b
+00A5 7C00        =1    168             MOV     R4, #00000000b
+00A7 7A00        =1    169             MOV     R2, #00000000b
+00A9 7900        =1    170             MOV     R1, #00000000b
+00AB 7800        =1    171             MOV     R0, #00000000b
+00AD 1168        =1    172             CALL    loadPreset
+00AF 22          =1    173             RET
+                 =1    174
+                 =1    175
+                 =1    176
+                 =1    177     ; HAS TO BE @END!
+                 =1    178
+                 =1    179     FIN:
+                       180
+                       181     ; setting initial state of field
+                       182     ; ----------------------------
+00B0 755201            183             mov     0x52, #01h
+00B3 755301            184             mov     0x53, #01h
+00B6 755401            185             mov     0x54, #01h
+00B9 754B01            186             mov     0x4B, #01h
+00BC 755B01            187             mov     0x5B, #01h
+                       188     ;----------------------------
+                       189     ; [START: next gen calc]
+                       190     ;---------------------------
+                       191     start_next_gen_calc:
+00BF 7840              192             mov     R0, #40h        ; start address of cells
+                       193
+                       194     loop_next_gen_calc:
+                       195
+                       196     ; check if address is in first line
+00C1 B84803            197             cjne    R0, #48h, first_line_not_equal
+00C4 0200CC            198             jmp     not_first_line
+                       199     first_line_not_equal:
+00C7 4003              200             jc      first_line
+00C9 0200CC            201             jmp     not_first_line
+                       202
+                       203     first_line:
+                       204
+                       205     not_first_line:
+                       206
+                       207     ; check if address is in last line
+00CC B87703            208             cjne    R0, #77h, last_line_not_equal
+00CF 0200D7            209             jmp     not_last_line
+                       210     last_line_not_equal:
+00D2 4003              211             jc      not_last_line
+00D4 0200D7            212             jmp     last_line
+                       213
+                       214     last_line:
+                       215
+                       216     not_last_line:
+                       217
+                       218     ; check if address is in first column
+00D7 E8                219             MOV     A, R0
+00D8 5407              220             ANL     A, #07h         ; check if the lowest 3 bits are set
+00DA B40000            221             cjne    A, #0h, not_first_column
+                       222     ; first_column
+                       223     not_first_column:
+00DD B40700            224             cjne    A, #07h, not_first_or_last_column
+                       225     ; last_column
+                       226     not_first_or_last_column:
+                       227     ; TODO
+                       228
+00E0 08                229             inc     R0              ; loop step
+00E1 B880DD            230             cjne    R0, #080h, loop_next_gen_calc   ; loop
+                       231
+                       232     ;---------------------------
+                       233     ; [END: next gen calc]
+                       234     ;---------------------------
+                       235
+                       236     ;---------------------------
+                       237     ; [START: display logic]
+                       238     ;---------------------------
+                       239     start_display:
+00E4 7840              240             mov     R0, #040h       ; start address of cells
+                       241
+00E6 7901              242             mov     R1, #01h        ; column index
+00E8 7A01              243             mov     R2, #01h        ; row index
+                       244
+                       245     ; reset led matrix
+00EA 758000            246             mov     p0, #0h
+00ED 759000            247             mov     p1, #0h
+                       248
+                       249     loop:
+00F0 E6                250             mov     A, @R0          ; load cell at R0 into A
+00F1 5401              251             ANL     A, #01h         ; and A with 01h
+00F3 B40103            252             cjne    A, #01h, after_write    ; if A is not equal to 01h, jump to after_write
+00F6 02010B            253             jmp     write_to_led_panel
+                       254
+                       255     after_write:
+00F9 E8                256             mov     A, R0           ; load current address (in R0) into A
+00FA 5407              257             ANL     A, #07h         ; check if the lowest bits are all set
+00FC B40703            258             cjne    A, #07h, loop_step      ; if they are, goto loop_step
+                       259
+                       260     ; shift the ROW pointer one to the left
+00FF EA                261             mov     A, R2
+0100 23                262             rl      A
+0101 FA                263             mov     R2, A
+                       264
+                       265     loop_step:
+0102 08                266             inc     R0              ; increase address pointer
+                       267
+                       268     ; shift the COL pointer on to the left
+0103 E9                269             mov     A, R1
+0104 23                270             rl      A
+0105 F9                271             mov     R1, A
+                       272
+0106 B880E7            273             cjne    R0, #080h, loop ; loop
+                       274
+0109 80D9              275             jmp     start_display
+                       276     ; [END: display logic  ]-----------------------------------------------------------------------------
+                       277
+                       278     write_to_led_panel:
+010B 8990              279             mov     p1, R1
+010D 8A80              280             mov     p0, R2
+010F 759000            281             mov     p1, #0h
+0112 758000            282             mov     p0, #0h
+0115 80E2              283             jmp     after_write
+****WARNING:Missing`END'directive
+ASSEMBLY COMPLETE, NO ERRORS FOUND, 1 WARNING
+
+
+ERROR SUMMARY:
+Line 283, WARNING:Missing`END'directive
+
+SYMBOL TABLE:
+??MCU_8051_IDE . . . . . . . . . . .  N  NUMB  8051H  NOT USED
+??VERSION. . . . . . . . . . . . . .  N  NUMB  0149H  NOT USED
+AC . . . . . . . . . . . . . . . . .  B  ADDR  00D6H  NOT USED
+ACC. . . . . . . . . . . . . . . . .  D  ADDR  00E0H  NOT USED
+ACSR . . . . . . . . . . . . . . . .  D  ADDR  0097H  NOT USED
+ADCF . . . . . . . . . . . . . . . .  D  ADDR  00F6H  NOT USED
+ADCLK. . . . . . . . . . . . . . . .  D  ADDR  00F2H  NOT USED
+ADCON. . . . . . . . . . . . . . . .  D  ADDR  00F3H  NOT USED
+ADDH . . . . . . . . . . . . . . . .  D  ADDR  00F5H  NOT USED
+ADDL . . . . . . . . . . . . . . . .  D  ADDR  00F4H  NOT USED
+AFTER_WRITE. . . . . . . . . . . . .  C  ADDR  00F9H
+AUXR . . . . . . . . . . . . . . . .  D  ADDR  008EH  NOT USED
+AUXR1. . . . . . . . . . . . . . . .  D  ADDR  00A2H  NOT USED
+B. . . . . . . . . . . . . . . . . .  D  ADDR  00F0H
+BDRCON . . . . . . . . . . . . . . .  D  ADDR  009BH  NOT USED
+BDRCON_1 . . . . . . . . . . . . . .  D  ADDR  009CH  NOT USED
+BRL. . . . . . . . . . . . . . . . .  D  ADDR  009AH  NOT USED
+CCAP0H . . . . . . . . . . . . . . .  D  ADDR  00FAH  NOT USED
+CCAP0L . . . . . . . . . . . . . . .  D  ADDR  00EAH  NOT USED
+CCAP1H . . . . . . . . . . . . . . .  D  ADDR  00FBH  NOT USED
+CCAP1L . . . . . . . . . . . . . . .  D  ADDR  00EBH  NOT USED
+CCAP2H . . . . . . . . . . . . . . .  D  ADDR  00FCH  NOT USED
+CCAP3H . . . . . . . . . . . . . . .  D  ADDR  00FDH  NOT USED
+CCAP4H . . . . . . . . . . . . . . .  D  ADDR  00FEH  NOT USED
+CCAPL2H. . . . . . . . . . . . . . .  D  ADDR  00FCH  NOT USED
+CCAPL2L. . . . . . . . . . . . . . .  D  ADDR  00ECH  NOT USED
+CCAPL3H. . . . . . . . . . . . . . .  D  ADDR  00FDH  NOT USED
+CCAPL3L. . . . . . . . . . . . . . .  D  ADDR  00EDH  NOT USED
+CCAPL4H. . . . . . . . . . . . . . .  D  ADDR  00FEH  NOT USED
+CCAPL4L. . . . . . . . . . . . . . .  D  ADDR  00EEH  NOT USED
+CCAPM0 . . . . . . . . . . . . . . .  D  ADDR  00DAH  NOT USED
+CCAPM1 . . . . . . . . . . . . . . .  D  ADDR  00DBH  NOT USED
+CCAPM2 . . . . . . . . . . . . . . .  D  ADDR  00DCH  NOT USED
+CCAPM3 . . . . . . . . . . . . . . .  D  ADDR  00DDH  NOT USED
+CCAPM4 . . . . . . . . . . . . . . .  D  ADDR  00DEH  NOT USED
+CCF0 . . . . . . . . . . . . . . . .  B  ADDR  00D8H  NOT USED
+CCF1 . . . . . . . . . . . . . . . .  B  ADDR  00D9H  NOT USED
+CCF2 . . . . . . . . . . . . . . . .  B  ADDR  00DAH  NOT USED
+CCF3 . . . . . . . . . . . . . . . .  B  ADDR  00DBH  NOT USED
+CCF4 . . . . . . . . . . . . . . . .  B  ADDR  00DCH  NOT USED
+CCON . . . . . . . . . . . . . . . .  D  ADDR  00D8H  NOT USED
+CFINT. . . . . . . . . . . . . . . .  C  ADDR  0033H  NOT USED
+CH . . . . . . . . . . . . . . . . .  D  ADDR  00F9H  NOT USED
+CHECKLESSTHANBOUNDS. . . . . . . . .  C  ADDR  001CH
+CHECKMAPBOUNDS . . . . . . . . . . .  C  ADDR  0016H
+CKCON. . . . . . . . . . . . . . . .  D  ADDR  008FH  NOT USED
+CKCON0 . . . . . . . . . . . . . . .  D  ADDR  008FH  NOT USED
+CKRL . . . . . . . . . . . . . . . .  D  ADDR  0097H  NOT USED
+CKSEL. . . . . . . . . . . . . . . .  D  ADDR  0085H  NOT USED
+CL . . . . . . . . . . . . . . . . .  D  ADDR  00E9H  NOT USED
+CLKREG . . . . . . . . . . . . . . .  D  ADDR  008FH  NOT USED
+CMOD . . . . . . . . . . . . . . . .  D  ADDR  00D9H  NOT USED
+CPRL2. . . . . . . . . . . . . . . .  B  ADDR  00C8H  NOT USED
+CR . . . . . . . . . . . . . . . . .  B  ADDR  00DEH  NOT USED
+CT2. . . . . . . . . . . . . . . . .  B  ADDR  00C9H  NOT USED
+CY . . . . . . . . . . . . . . . . .  B  ADDR  00D7H  NOT USED
+DP0H . . . . . . . . . . . . . . . .  D  ADDR  0083H  NOT USED
+DP0L . . . . . . . . . . . . . . . .  D  ADDR  0082H  NOT USED
+DP1H . . . . . . . . . . . . . . . .  D  ADDR  0085H  NOT USED
+DP1L . . . . . . . . . . . . . . . .  D  ADDR  0084H  NOT USED
+DPH. . . . . . . . . . . . . . . . .  D  ADDR  0083H  NOT USED
+DPL. . . . . . . . . . . . . . . . .  D  ADDR  0082H  NOT USED
+EA . . . . . . . . . . . . . . . . .  B  ADDR  00AFH  NOT USED
+EC . . . . . . . . . . . . . . . . .  B  ADDR  00AEH  NOT USED
+EECON. . . . . . . . . . . . . . . .  D  ADDR  0096H  NOT USED
+ES . . . . . . . . . . . . . . . . .  B  ADDR  00ACH  NOT USED
+ET0. . . . . . . . . . . . . . . . .  B  ADDR  00A9H  NOT USED
+ET1. . . . . . . . . . . . . . . . .  B  ADDR  00ABH  NOT USED
+ET2. . . . . . . . . . . . . . . . .  B  ADDR  00ADH  NOT USED
+EVALCELL . . . . . . . . . . . . . .  C  ADDR  002FH
+EX0. . . . . . . . . . . . . . . . .  B  ADDR  00A8H  NOT USED
+EX1. . . . . . . . . . . . . . . . .  B  ADDR  00AAH  NOT USED
+EXEN2. . . . . . . . . . . . . . . .  B  ADDR  00CBH  NOT USED
+EXF2 . . . . . . . . . . . . . . . .  B  ADDR  00CEH  NOT USED
+EXTI0. . . . . . . . . . . . . . . .  C  ADDR  0003H  NOT USED
+EXTI1. . . . . . . . . . . . . . . .  C  ADDR  0013H  NOT USED
+F0 . . . . . . . . . . . . . . . . .  B  ADDR  00D5H  NOT USED
+FE . . . . . . . . . . . . . . . . .  B  ADDR  009FH  NOT USED
+FIN. . . . . . . . . . . . . . . . .  C  ADDR  00B0H
+FIRST_LINE . . . . . . . . . . . . .  C  ADDR  00CCH
+FIRST_LINE_NOT_EQUAL . . . . . . . .  C  ADDR  00C7H
+IE . . . . . . . . . . . . . . . . .  D  ADDR  00A8H  NOT USED
+IE0. . . . . . . . . . . . . . . . .  B  ADDR  0089H  NOT USED
+IE1. . . . . . . . . . . . . . . . .  B  ADDR  008BH  NOT USED
+INIT . . . . . . . . . . . . . . . .  C  ADDR  0000H  NOT USED
+INT0 . . . . . . . . . . . . . . . .  B  ADDR  00B2H  NOT USED
+INT1 . . . . . . . . . . . . . . . .  B  ADDR  00B3H  NOT USED
+IP . . . . . . . . . . . . . . . . .  D  ADDR  00B8H  NOT USED
+IPH. . . . . . . . . . . . . . . . .  D  ADDR  00B7H  NOT USED
+IPH0 . . . . . . . . . . . . . . . .  D  ADDR  00B7H  NOT USED
+IPH1 . . . . . . . . . . . . . . . .  D  ADDR  00B3H  NOT USED
+IPL0 . . . . . . . . . . . . . . . .  D  ADDR  00B8H  NOT USED
+IPL1 . . . . . . . . . . . . . . . .  D  ADDR  00B2H  NOT USED
+ISDONE . . . . . . . . . . . . . . .  C  ADDR  005BH
+IT0. . . . . . . . . . . . . . . . .  B  ADDR  0088H  NOT USED
+IT1. . . . . . . . . . . . . . . . .  B  ADDR  008AH  NOT USED
+KBE. . . . . . . . . . . . . . . . .  D  ADDR  009DH  NOT USED
+KBF. . . . . . . . . . . . . . . . .  D  ADDR  009EH  NOT USED
+KBLS . . . . . . . . . . . . . . . .  D  ADDR  009CH  NOT USED
+LAST_LINE. . . . . . . . . . . . . .  C  ADDR  00D7H
+LAST_LINE_NOT_EQUAL. . . . . . . . .  C  ADDR  00D2H
+LOADGLIDERPRESET . . . . . . . . . .  C  ADDR  009FH
+LOADPRESET . . . . . . . . . . . . .  C  ADDR  0068H
+LOOP . . . . . . . . . . . . . . . .  C  ADDR  00F0H
+LOOP_NEXT_GEN_CALC . . . . . . . . .  C  ADDR  00C1H
+LOOP_STEP. . . . . . . . . . . . . .  C  ADDR  0102H
+NEXTINPUTROW . . . . . . . . . . . .  C  ADDR  003BH
+NEXTMAPSTEP. . . . . . . . . . . . .  C  ADDR  0037H
+NOT_FIRST_COLUMN . . . . . . . . . .  C  ADDR  00DDH
+NOT_FIRST_LINE . . . . . . . . . . .  C  ADDR  00CCH
+NOT_FIRST_OR_LAST_COLUMN . . . . . .  C  ADDR  00E0H
+NOT_LAST_LINE. . . . . . . . . . . .  C  ADDR  00D7H
+OSCCON . . . . . . . . . . . . . . .  D  ADDR  0086H  NOT USED
+OV . . . . . . . . . . . . . . . . .  B  ADDR  00D2H  NOT USED
+P. . . . . . . . . . . . . . . . . .  B  ADDR  00D0H
+P0 . . . . . . . . . . . . . . . . .  D  ADDR  0080H
+P1 . . . . . . . . . . . . . . . . .  D  ADDR  0090H
+P1M1 . . . . . . . . . . . . . . . .  D  ADDR  00D4H  NOT USED
+P1M2 . . . . . . . . . . . . . . . .  D  ADDR  00E2H  NOT USED
+P2 . . . . . . . . . . . . . . . . .  D  ADDR  00A0H  NOT USED
+P3 . . . . . . . . . . . . . . . . .  D  ADDR  00B0H  NOT USED
+P3M1 . . . . . . . . . . . . . . . .  D  ADDR  00D5H  NOT USED
+P3M2 . . . . . . . . . . . . . . . .  D  ADDR  00E3H  NOT USED
+P4 . . . . . . . . . . . . . . . . .  D  ADDR  00C0H  NOT USED
+P4M1 . . . . . . . . . . . . . . . .  D  ADDR  00D6H  NOT USED
+P4M2 . . . . . . . . . . . . . . . .  D  ADDR  00E4H  NOT USED
+P5 . . . . . . . . . . . . . . . . .  D  ADDR  00E8H  NOT USED
+PC . . . . . . . . . . . . . . . . .  B  ADDR  00BEH  NOT USED
+PCON . . . . . . . . . . . . . . . .  D  ADDR  0087H  NOT USED
+PPCL . . . . . . . . . . . . . . . .  B  ADDR  00BEH  NOT USED
+PS . . . . . . . . . . . . . . . . .  B  ADDR  00BCH  NOT USED
+PSL. . . . . . . . . . . . . . . . .  B  ADDR  00BCH  NOT USED
+PSW. . . . . . . . . . . . . . . . .  D  ADDR  00D0H  NOT USED
+PT0. . . . . . . . . . . . . . . . .  B  ADDR  00B9H  NOT USED
+PT0L . . . . . . . . . . . . . . . .  B  ADDR  00B9H  NOT USED
+PT1. . . . . . . . . . . . . . . . .  B  ADDR  00BBH  NOT USED
+PT1L . . . . . . . . . . . . . . . .  B  ADDR  00BBH  NOT USED
+PT2. . . . . . . . . . . . . . . . .  B  ADDR  00BDH  NOT USED
+PT2L . . . . . . . . . . . . . . . .  B  ADDR  00BDH  NOT USED
+PX0. . . . . . . . . . . . . . . . .  B  ADDR  00B8H  NOT USED
+PX0L . . . . . . . . . . . . . . . .  B  ADDR  00B8H  NOT USED
+PX1. . . . . . . . . . . . . . . . .  B  ADDR  00BAH  NOT USED
+PX1L . . . . . . . . . . . . . . . .  B  ADDR  00BAH  NOT USED
+RB8. . . . . . . . . . . . . . . . .  B  ADDR  009AH  NOT USED
+RCAP2H . . . . . . . . . . . . . . .  D  ADDR  00CBH  NOT USED
+RCAP2L . . . . . . . . . . . . . . .  D  ADDR  00CAH  NOT USED
+RCLK . . . . . . . . . . . . . . . .  B  ADDR  00CDH  NOT USED
+RD . . . . . . . . . . . . . . . . .  B  ADDR  00B7H  NOT USED
+REN. . . . . . . . . . . . . . . . .  B  ADDR  009CH  NOT USED
+RESET. . . . . . . . . . . . . . . .  C  ADDR  0000H  NOT USED
+RESETPROGRAMMMAP . . . . . . . . . .  C  ADDR  0050H
+RESETPROGRAMMMAPSTEP . . . . . . . .  C  ADDR  0056H
+RI . . . . . . . . . . . . . . . . .  B  ADDR  0098H  NOT USED
+RS0. . . . . . . . . . . . . . . . .  B  ADDR  00D3H  NOT USED
+RS1. . . . . . . . . . . . . . . . .  B  ADDR  00D4H  NOT USED
+RXD. . . . . . . . . . . . . . . . .  B  ADDR  00B0H  NOT USED
+SADDR. . . . . . . . . . . . . . . .  D  ADDR  00A9H  NOT USED
+SADDR_0. . . . . . . . . . . . . . .  D  ADDR  00A9H  NOT USED
+SADDR_1. . . . . . . . . . . . . . .  D  ADDR  00AAH  NOT USED
+SADEN. . . . . . . . . . . . . . . .  D  ADDR  00B9H  NOT USED
+SADEN_0. . . . . . . . . . . . . . .  D  ADDR  00B9H  NOT USED
+SADEN_1. . . . . . . . . . . . . . .  D  ADDR  00BAH  NOT USED
+SBUF . . . . . . . . . . . . . . . .  D  ADDR  0099H  NOT USED
+SCON . . . . . . . . . . . . . . . .  D  ADDR  0098H  NOT USED
+SETTARGETBIT . . . . . . . . . . . .  C  ADDR  004AH
+SINT . . . . . . . . . . . . . . . .  C  ADDR  0023H  NOT USED
+SM0. . . . . . . . . . . . . . . . .  B  ADDR  009FH  NOT USED
+SM1. . . . . . . . . . . . . . . . .  B  ADDR  009EH  NOT USED
+SM2. . . . . . . . . . . . . . . . .  B  ADDR  009DH  NOT USED
+SP . . . . . . . . . . . . . . . . .  D  ADDR  0081H  NOT USED
+SPCON. . . . . . . . . . . . . . . .  D  ADDR  00C3H  NOT USED
+SPCR . . . . . . . . . . . . . . . .  D  ADDR  00D5H  NOT USED
+SPDAT. . . . . . . . . . . . . . . .  D  ADDR  00C5H  NOT USED
+SPDR . . . . . . . . . . . . . . . .  D  ADDR  0086H  NOT USED
+SPSR . . . . . . . . . . . . . . . .  D  ADDR  00AAH  NOT USED
+SPSTA. . . . . . . . . . . . . . . .  D  ADDR  00C4H  NOT USED
+START_DISPLAY. . . . . . . . . . . .  C  ADDR  00E4H
+START_NEXT_GEN_CALC. . . . . . . . .  C  ADDR  00BFH  NOT USED
+STEPCOL. . . . . . . . . . . . . . .  C  ADDR  0025H
+STEPINPUTROW . . . . . . . . . . . .  C  ADDR  0044H
+STEPROW. . . . . . . . . . . . . . .  C  ADDR  0021H
+T0 . . . . . . . . . . . . . . . . .  B  ADDR  00B4H  NOT USED
+T1 . . . . . . . . . . . . . . . . .  B  ADDR  00B5H  NOT USED
+T2CON. . . . . . . . . . . . . . . .  D  ADDR  00C8H  NOT USED
+T2MOD. . . . . . . . . . . . . . . .  D  ADDR  00C9H  NOT USED
+TB8. . . . . . . . . . . . . . . . .  B  ADDR  009BH  NOT USED
+TCLK . . . . . . . . . . . . . . . .  B  ADDR  00CCH  NOT USED
+TCON . . . . . . . . . . . . . . . .  D  ADDR  0088H  NOT USED
+TF0. . . . . . . . . . . . . . . . .  B  ADDR  008DH  NOT USED
+TF1. . . . . . . . . . . . . . . . .  B  ADDR  008FH  NOT USED
+TF2. . . . . . . . . . . . . . . . .  B  ADDR  00CFH  NOT USED
+TH0. . . . . . . . . . . . . . . . .  D  ADDR  008CH  NOT USED
+TH1. . . . . . . . . . . . . . . . .  D  ADDR  008DH  NOT USED
+TH2. . . . . . . . . . . . . . . . .  D  ADDR  00CDH  NOT USED
+TI . . . . . . . . . . . . . . . . .  B  ADDR  0099H  NOT USED
+TIMER0 . . . . . . . . . . . . . . .  C  ADDR  000BH  NOT USED
+TIMER1 . . . . . . . . . . . . . . .  C  ADDR  001BH  NOT USED
+TIMER2 . . . . . . . . . . . . . . .  C  ADDR  002BH  NOT USED
+TL0. . . . . . . . . . . . . . . . .  D  ADDR  008AH  NOT USED
+TL1. . . . . . . . . . . . . . . . .  D  ADDR  008BH  NOT USED
+TL2. . . . . . . . . . . . . . . . .  D  ADDR  00CCH  NOT USED
+TMOD . . . . . . . . . . . . . . . .  D  ADDR  0089H  NOT USED
+TR0. . . . . . . . . . . . . . . . .  B  ADDR  008CH  NOT USED
+TR1. . . . . . . . . . . . . . . . .  B  ADDR  008EH  NOT USED
+TR2. . . . . . . . . . . . . . . . .  B  ADDR  00CAH  NOT USED
+TXD. . . . . . . . . . . . . . . . .  B  ADDR  00B1H  NOT USED
+WDTCON . . . . . . . . . . . . . . .  D  ADDR  00A7H  NOT USED
+WDTPRG . . . . . . . . . . . . . . .  D  ADDR  00A7H  NOT USED
+WDTRST . . . . . . . . . . . . . . .  D  ADDR  00A6H  NOT USED
+WR . . . . . . . . . . . . . . . . .  B  ADDR  00B6H  NOT USED
+WRITE_TO_LED_PANEL . . . . . . . . .  C  ADDR  010BH

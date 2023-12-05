@@ -108,76 +108,79 @@ BitmapInput                                                                     
 0057 7700              107             MOV     @R1, #00h       ; Reset Cell
 0059 80F5              108             JMP     resetProgrammMap
                        109
-                       110     isDone:                         ; ..CLEANUP..
-005B E4                111             CLR     A
-005C 75F000            112             MOV     B, #00h
-005F 7800              113             MOV     R0, #00h
-0061 7900              114             MOV     R1, #00h
-0063 7F00              115             MOV     R7, #00h
-0065 0200B0            116             JMP     FIN
-                       117             ; FIN. => Play..
-                       118
-                       119     ;;;;;;;;;;;;;;
-                       120     ; OPTIONALS
-                       121     loadPreset:
-                       122             ; bottom up with R0 => R7
-0068 E8                123             MOV     A, R0
-0069 89F0              124             MOV     B, R1
-006B 7820              125             MOV     R0, #20h        ; lowest line.
-006D 7924              126             MOV     R1, #24h        ; 2. line (bottom up)
-006F F6                127             MOV     @R0, A
-0070 A7F0              128             MOV     @R1, B
-0072 EA                129             MOV     A, R2
-0073 8BF0              130             MOV     B, R3
-0075 7828              131             MOV     R0, #28h        ; 3. line
-0077 792C              132             MOV     R1, #2Ch        ; 4. line
-0079 F6                133             MOV     @R0, A
-007A A7F0              134             MOV     @R1, B
-007C EC                135             MOV     A, R4
-007D 8DF0              136             MOV     B, R5
-007F 7821              137             MOV     R0, #21h        ; 5. line
-0081 7925              138             MOV     R1, #25h        ; 6. line
-0083 F6                139             MOV     @R0, A
-0084 A7F0              140             MOV     @R1, B
-0086 EE                141             MOV     A, R6
-0087 8FF0              142             MOV     B, R7
-0089 7829              143             MOV     R0, #29h        ; 5. line
-008B 792D              144             MOV     R1, #2Dh        ; 6. line
-008D F6                145             MOV     @R0, A
-008E A7F0              146             MOV     @R1, B
-                       147             ; Clear All registers
-0090 7F00              148             MOV     R7, #00000000b
-0092 7E00              149             MOV     R6, #00000000b
-0094 7D00              150             MOV     R5, #00000000b
-0096 7C00              151             MOV     R4, #00000000b
-0098 7A00              152             MOV     R2, #00000000b
-009A 7900              153             MOV     R1, #00000000b
-009C 7800              154             MOV     R0, #00000000b
-009E 22                155             RET
-                       156
-                       157     ; PRESETS
-                       158     loadGliderPreset:
-009F 7F40              159             MOV     R7, #01000000b
-00A1 7E20              160             MOV     R6, #00100000b
-00A3 7DE0              161             MOV     R5, #11100000b
-00A5 7C00              162             MOV     R4, #00000000b
-00A7 7A00              163             MOV     R2, #00000000b
-00A9 7900              164             MOV     R1, #00000000b
-00AB 7800              165             MOV     R0, #00000000b
-00AD 1168              166             CALL    loadPreset
-00AF 22                167             RET
-                       168
-                       169
-                       170
-                       171     ; HAS TO BE @END!
+                       110     ; STUPID: Due 8-Bit relative addressable BUG,
+                       111     ;         this label "isDone" cannot be at the bottom,
+                       112     ;         because its called too far ahed?!?!
+                       113     isDone:                         ; ..CLEANUP..
+005B E4                114             CLR     A
+005C 75F000            115             MOV     B, #00h
+005F 7800              116             MOV     R0, #00h
+0061 7900              117             MOV     R1, #00h
+0063 7F00              118             MOV     R7, #00h
+0065 0200B0            119             JMP     FIN
+                       120             ; FIN. => Play..
+                       121
+                       122     ;;;;;;;;;;;;;;
+                       123     ; OPTIONALS
+                       124     loadPreset:
+                       125             ; bottom up with R0 => R7
+0068 E8                126             MOV     A, R0
+0069 89F0              127             MOV     B, R1
+006B 7820              128             MOV     R0, #20h        ; lowest line.
+006D 7924              129             MOV     R1, #24h        ; 2. line (bottom up)
+006F F6                130             MOV     @R0, A
+0070 A7F0              131             MOV     @R1, B
+0072 EA                132             MOV     A, R2
+0073 8BF0              133             MOV     B, R3
+0075 7828              134             MOV     R0, #28h        ; 3. line
+0077 792C              135             MOV     R1, #2Ch        ; 4. line
+0079 F6                136             MOV     @R0, A
+007A A7F0              137             MOV     @R1, B
+007C EC                138             MOV     A, R4
+007D 8DF0              139             MOV     B, R5
+007F 7821              140             MOV     R0, #21h        ; 5. line
+0081 7925              141             MOV     R1, #25h        ; 6. line
+0083 F6                142             MOV     @R0, A
+0084 A7F0              143             MOV     @R1, B
+0086 EE                144             MOV     A, R6
+0087 8FF0              145             MOV     B, R7
+0089 7829              146             MOV     R0, #29h        ; 5. line
+008B 792D              147             MOV     R1, #2Dh        ; 6. line
+008D F6                148             MOV     @R0, A
+008E A7F0              149             MOV     @R1, B
+                       150             ; Clear All registers
+0090 7F00              151             MOV     R7, #00000000b
+0092 7E00              152             MOV     R6, #00000000b
+0094 7D00              153             MOV     R5, #00000000b
+0096 7C00              154             MOV     R4, #00000000b
+0098 7A00              155             MOV     R2, #00000000b
+009A 7900              156             MOV     R1, #00000000b
+009C 7800              157             MOV     R0, #00000000b
+009E 22                158             RET
+                       159
+                       160     ; PRESETS
+                       161     loadGliderPreset:
+009F 7F40              162             MOV     R7, #01000000b
+00A1 7E20              163             MOV     R6, #00100000b
+00A3 7DE0              164             MOV     R5, #11100000b
+00A5 7C00              165             MOV     R4, #00000000b
+00A7 7A00              166             MOV     R2, #00000000b
+00A9 7900              167             MOV     R1, #00000000b
+00AB 7800              168             MOV     R0, #00000000b
+00AD 1168              169             CALL    loadPreset
+00AF 22                170             RET
+                       171
                        172
-                       173     FIN:
+                       173
+                       174     ; HAS TO BE @END!
+                       175
+                       176     FIN:
 ****WARNING:Missing`END'directive
 ASSEMBLY COMPLETE, NO ERRORS FOUND, 1 WARNING
 
 
 ERROR SUMMARY:
-Line 173, WARNING:Missing`END'directive
+Line 176, WARNING:Missing`END'directive
 
 SYMBOL TABLE:
 ??MCU_8051_IDE . . . . . . . . . . .  N  NUMB  8051H  NOT USED
