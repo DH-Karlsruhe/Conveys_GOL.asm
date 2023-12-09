@@ -1,24 +1,24 @@
 ; setting initial state of field
 ; ----------------------------
-mov	0x52, #01h
+;mov	0x52, #01h
 mov	0x53, #01h
-mov	0x54, #01h
+;mov	0x54, #01h
 mov	0x4B, #01h
 mov	0x5B, #01h
 
-mov	0x41, #01h
-mov	0x47, #01h
-mov	0x48, #01h
-mov 	0x4F, #01h
-mov	0x78, #01h
-mov	0x7F, #01h
+;mov	0x41, #01h
+;mov	0x47, #01h
+;mov	0x48, #01h
+;mov 	0x4F, #01h
+;mov	0x78, #01h
+;mov	0x7F, #01h
 
 ; ----------------------------
 start:
 	call start_next_gen_calc
 	call start_display
-	jmp start
-	;jmp end
+	;jmp start
+	jmp end
 
 ; [START: next gen calc]------------------------------------------------------------------------------------------------------------------------
 start_next_gen_calc:
@@ -182,6 +182,7 @@ start_display:
 	mov	p1, #0h
 
 display_loop:
+	call	update_cell
 	mov	A, @R0				; load cell at R0 into A
 	ANL	A, #01h				; and A with 01h
 	cjne	A, #01h, after_led_panel_write	; if A is not equal to 01h, jump to after_write
@@ -202,6 +203,35 @@ loop_step:
 
 ret
 ; [END: display logic  ]------------------------------------------------------------------------------------------------------------------------
+
+update_cell:
+	mov	A, @R0
+	anl	A, #00000001b			; check if cell was alive
+	cjne	A, #00000001b, was_not_alive
+	; was alive
+	mov 	A, @R0
+	rr	A
+	anl	A, #01111111b			; ignore the rotated bit
+
+	cjne	A, #02h, not_two_neighbors	; 2 neighbors
+	jmp	cell_alive
+	not_two_neighbors:
+	cjne	A, #03h, cell_dead		; 3 neighbors
+	jmp cell_alive
+
+	was_not_alive:
+	mov	A, @R0
+	rr	A				; rotate to the left once
+	cjne	A, #03h, cell_dead		; 3 neighbors
+	jmp cell_alive
+
+cell_alive:
+	mov	@R0, #01h
+	ret
+
+cell_dead:
+	mov	@R0, #00h
+	ret
 
 check_first_last_line:
 ; if R0 < 48 {
