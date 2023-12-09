@@ -1,4 +1,3 @@
-setb C
 ; setting initial state of field
 ; ----------------------------
 mov	0x52, #01h
@@ -6,15 +5,24 @@ mov	0x53, #01h
 mov	0x54, #01h
 mov	0x4B, #01h
 mov	0x5B, #01h
+
+mov	0x41, #01h
+mov	0x47, #01h
+mov	0x48, #01h
+mov 	0x4F, #01h
+mov	0x78, #01h
+mov	0x7F, #01h
+
 ; ----------------------------
 start:
 	call start_next_gen_calc
 	call start_display
 	jmp start
+	;jmp end
 
 ; [START: next gen calc]------------------------------------------------------------------------------------------------------------------------
 start_next_gen_calc:
-	mov	R0, #77h			; start address of cells
+	mov	R0, #40h			; start address of cells
 
 loop_next_gen_calc:
 	mov 	R7, #0h				; reset the border registry
@@ -39,9 +47,9 @@ top_wrap:
 	mov	A, R7
 	anl	A, #00000001b				; check if in first row
 	cjne	A, #00000001b, not_top
-	mov	A, R6
+	mov	A, R1
 	add	A, #40h
-	mov 	R6, A
+	mov 	R1, A
 	not_top:
 	ret
 
@@ -49,19 +57,20 @@ bottom_wrap:
 	mov	A, R7
 	anl	A, #00000010b				; check if in first row
 	cjne	A, #00000010b, not_bottom
-	mov	A, R6
+	mov	A, R1
+	clr 	C					; clear the carry bit, so it does not mess up the subtraction
 	subb	A, #40h
-	mov 	R6, A
-	bottom_top:
+	mov 	R1, A
+	not_bottom:
 	ret
 
 left_wrap:
 	mov	A, R7
 	anl	A, #00000100b				; check if in first column
 	cjne	A, #00000100b, not_left
-	mov	A, R6
+	mov	A, R1
 	add	A, #08h
-	mov	R6, A
+	mov	R1, A
 	not_left:
 	ret
 
@@ -69,16 +78,18 @@ right_wrap:
 	mov	A, R7
 	anl	A, #00001000b				; check if in last column
 	cjne	A, #00001000b, not_right
-	mov	A, R6
+	mov	A, R1
+	clr 	C					; clear the carry bit, so it does not mess up the subtraction
 	subb	A, #08h
-	mov	R6, A
+	mov	R1, A
 	not_right:
 	ret
 
 check_top_left:
 	mov	A, R0
-	subb	A, #09h
-	mov	R6, A
+	clr 	C					; clear the carry bit, so it does not mess up the subtraction
+	subb	A, #09h					; substract 9 from address, but we have to write 08 here because the carry flag ist set (idk why)
+	mov	R1, A
 	call top_wrap
 	call left_wrap
 	call check_neighbor
@@ -87,16 +98,18 @@ check_top_left:
 
 check_top:
 	mov	A, R0
+	clr 	C					; clear the carry bit, so it does not mess up the subtraction
 	subb	A, #08h
-	mov	R6, A
+	mov	R1, A
 	call top_wrap
 	call check_neighbor
 	ret
 
 check_top_right:
 	mov	A, R0
+	clr 	C					; clear the carry bit, so it does not mess up the subtraction
 	subb	A, #07h
-	mov	R6, A
+	mov	R1, A
 	call top_wrap
 	call right_wrap
 	call check_neighbor
@@ -104,8 +117,9 @@ check_top_right:
 
 check_left:
 	mov	A, R0
+	clr 	C					; clear the carry bit, so it does not mess up the subtraction
 	subb	A, #01h
-	mov	R6, A
+	mov	R1, A
 	call left_wrap
 	call check_neighbor
 	ret
@@ -113,7 +127,7 @@ check_left:
 check_right:
 	mov	A, R0
 	add	A, #01h
-	mov	R6, A
+	mov	R1, A
 	call right_wrap
 	call check_neighbor
 	ret
@@ -121,7 +135,7 @@ check_right:
 check_bottom_left:
 	mov	A, R0
 	add	A, #07h
-	mov	R6, A
+	mov	R1, A
 	call bottom_wrap
 	call left_wrap
 	call check_neighbor
@@ -130,7 +144,7 @@ check_bottom_left:
 check_bottom:
 	mov	A, R0
 	add	A, #08h
-	mov	R6, A
+	mov	R1, A
 	call	bottom_wrap
 	call check_neighbor
 	ret
@@ -138,21 +152,30 @@ check_bottom:
 check_bottom_right:
 	mov	A, R0
 	add	A, #09h
-	mov	R6, A
+	mov	R1, A
 	call	bottom_wrap
 	call	right_wrap
-	call check_neighbor
+	call	check_neighbor
 	ret
 
 check_neighbor:
-	mov A, @R6
+	mov	A, @R1
+	anl	A, #00000001b
+	cjne	A, #00000001b, neighbor_not_alive
+	; when neighbor is alive, add 2 to the cell value
+	mov	A, @R0
+	add	A, #02h
+	mov	@R0, A
+
+	neighbor_not_alive:
+	ret
 
 ; [START: display logic]------------------------------------------------------------------------------------------------------------------------
 start_display:
 	mov	R0, #040h			; start address of cells
 
-	mov	R1, #01h			; column index
-	mov	R2, #01h			; row index
+	mov	R2, #01h			; column index
+	mov	R3, #01h			; row index
 
 	; reset led matrix
 	mov	p0, #0h
@@ -197,18 +220,18 @@ check_first_last_line:
 		ret
 
 	not_first_line:
-	
+
 		; check if address is in last line
 		cjne	R0, #77h, last_line_not_equal
 		jmp	not_last_line
 	last_line_not_equal:
 		jc	not_last_line
 		jmp	last_line
-	
+
 	last_line:
 		mov	R7, #00000010b
 		ret
-	
+
 	not_last_line:
 	ret
 
@@ -238,20 +261,22 @@ check_first_last_column:
 		ret
 
 shift_row_pointer:
-	mov	A, R2
+	mov	A, R3
 	rl 	A
-	mov 	R2, A
+	mov 	R3, A
 	ret
 
 shift_col_pointer:
-	mov	A, R1
+	mov	A, R2
 	rl	A
-	mov	R1, A
+	mov	R2, A
 	ret
 
 write_to_led_panel:
-	mov	p1, R1
-	mov	p0, R2
+	mov	p1, R2
+	mov	p0, R3
 	mov	p1, #0h
 	mov	p0, #0h
 	ret
+
+end:
