@@ -1,24 +1,21 @@
+; reset led matrix
+mov	p0, #0h
+mov	p1, #0h
+
 ; setting initial state of field
 ; ----------------------------
-;mov	0x52, #01h
-mov	0x53, #01h
-;mov	0x54, #01h
-mov	0x4B, #01h
-mov	0x5B, #01h
-
-;mov	0x41, #01h
-;mov	0x47, #01h
-;mov	0x48, #01h
-;mov 	0x4F, #01h
-;mov	0x78, #01h
-;mov	0x7F, #01h
+mov	0x41, #01h
+mov	0x4A, #01h
+mov	0x50, #01h
+mov	0x51, #01h
+mov	0x52, #01h
 
 ; ----------------------------
 start:
 	call start_next_gen_calc
 	call start_display
-	;jmp start
-	jmp end
+	jmp start
+	;jmp end
 
 ; [START: next gen calc]------------------------------------------------------------------------------------------------------------------------
 start_next_gen_calc:
