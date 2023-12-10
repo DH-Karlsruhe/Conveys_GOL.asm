@@ -1,6 +1,26 @@
 # Conveys_GOL.asm
 Assembly Implementierung des Conveys Spiel des Lebens in der Vorlesung: "systemnahe Programmierung".
 
+## Programm als Pseudocode
+```
+start:
+    call start_next_gen_calc
+    call start_display
+    jmp start
+
+start_next_gen_calc:
+    <wiederhole für jede Zelle>
+        <überprüfe, ob Zelle am Rand vom Spielfeld ist>
+        <überprüfe die 8 Nachbarzellen>
+
+start_display:
+    <wiederhole für jede Zelle>
+        <Zelle hat 3 Nachbarn: setze Zelle auf 1>
+        <Zelle ist tot und hat 2 oder 3 Nachbarn: setze Zelle auf 1>
+        <sonst setze Zelle auf 0>
+        <wenn Zelle 1, Zeige es in LED Matrix>
+
+```
 
 ## Schematischer Programmablauf
 
