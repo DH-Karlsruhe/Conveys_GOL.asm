@@ -4,11 +4,12 @@ mov	p1, #0h
 
 ; setting initial state of field
 ; ----------------------------
-mov	0x41, #01h
-mov	0x4A, #01h
-mov	0x50, #01h
-mov	0x51, #01h
-mov	0x52, #01h
+;mov	0x41, #01h
+;mov	0x4A, #01h
+;mov	0x50, #01h
+;mov	0x51, #01h
+;mov	0x52, #01h
+include ../Conveys_GOL/BitmapInput.asm
 
 ; ----------------------------
 start:
@@ -306,4 +307,4 @@ write_to_led_panel:
 	mov	p0, #0h
 	ret
 
-end:
+END:
